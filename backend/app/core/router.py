@@ -33,7 +33,7 @@ async def login(body: LoginRequest, response: Response):
 
 @router.post("/auth/logout")
 async def logout(response: Response):
-    response.delete_cookie("access_token")
+    response.delete_cookie("access_token", httponly=True, secure=True, samesite="lax")
     return {"ok": True}
 
 
