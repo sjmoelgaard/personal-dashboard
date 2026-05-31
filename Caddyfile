@@ -1,0 +1,16 @@
+{$DOMAIN} {
+    # Frontend
+    handle /* {
+        reverse_proxy frontend:80
+    }
+
+    # Backend API
+    handle /api/* {
+        reverse_proxy backend:8000
+    }
+}
+
+# Ntfy push notifikationer — eksponeret på subdomain så telefonen kan nå det
+ntfy.{$DOMAIN} {
+    reverse_proxy ntfy:80
+}
