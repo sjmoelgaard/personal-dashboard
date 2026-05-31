@@ -11,6 +11,7 @@ export function Login() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    if (!password.trim()) return
     setLoading(true)
     setError('')
     try {

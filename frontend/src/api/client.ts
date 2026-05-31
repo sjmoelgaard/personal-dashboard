@@ -1,10 +1,11 @@
 const BASE = '/api'
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
+  const { headers: callerHeaders, ...restOptions } = options ?? {}
   const res = await fetch(`${BASE}${path}`, {
     credentials: 'include',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
-    ...options,
+    headers: { 'Content-Type': 'application/json', ...(callerHeaders as Record<string, string>) },
+    ...restOptions,
   })
   if (!res.ok) throw new Error(`${res.status}`)
   return res.json()
