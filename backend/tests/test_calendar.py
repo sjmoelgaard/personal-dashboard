@@ -50,3 +50,42 @@ def test_parse_events_normalizes_to_utc():
     events = parse_events(MINIMAL_ICAL)
     for event in events:
         assert event["start_dt"].tzinfo == timezone.utc
+
+
+@pytest.mark.asyncio
+async def test_get_events_requires_auth(client):
+    r = await client.get("/api/calendar/events")
+    assert r.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_sync_requires_auth(client):
+    r = await client.post("/api/calendar/sync")
+    assert r.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_get_events_returns_list(client, monkeypatch):
+    import app.core.config as cfg
+    monkeypatch.setattr(cfg.settings, "owner_password", "testpass")
+
+    # Login
+    login = await client.post("/api/auth/login", json={"password": "testpass"})
+    client.cookies.set("access_token", login.cookies["access_token"])
+
+    r = await client.get("/api/calendar/events")
+    assert r.status_code == 200
+    assert isinstance(r.json(), list)
+
+
+@pytest.mark.asyncio
+async def test_sync_without_ical_url_returns_error(client, monkeypatch):
+    import app.core.config as cfg
+    monkeypatch.setattr(cfg.settings, "owner_password", "testpass")
+    monkeypatch.setattr(cfg.settings, "ical_url", "")
+
+    login = await client.post("/api/auth/login", json={"password": "testpass"})
+    client.cookies.set("access_token", login.cookies["access_token"])
+
+    r = await client.post("/api/calendar/sync")
+    assert r.status_code == 400
