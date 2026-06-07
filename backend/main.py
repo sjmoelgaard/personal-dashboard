@@ -6,34 +6,30 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.router import router as core_router
 from app.modules.calendar.router import router as calendar_router
+from app.modules.calendar.admin_router import router as admin_router
 from app.core.scheduler import setup_scheduler
 
 logger = logging.getLogger(__name__)
 
 
 async def run_calendar_sync():
-    """Wrapper that fetches DB session and runs sync."""
+    """Kører daglig sync af alle aktive kalender-kilder."""
     from app.core.database import AsyncSessionLocal
-    from app.modules.calendar.service import sync_calendar
-    from app.core.config import settings
-    if not settings.ical_url:
-        return
+    from app.modules.calendar.service import sync_all_sources
     async with AsyncSessionLocal() as db:
         try:
-            count = await sync_calendar(db, settings.ical_url)
-            logger.info(f"Calendar sync: {count} events")
+            count = await sync_all_sources(db)
+            logger.info(f"Daglig sync: {count} events total")
         except Exception as e:
-            logger.error(f"Calendar sync failed: {e}")
+            logger.error(f"Daglig sync fejlede: {e}")
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup
     scheduler = setup_scheduler(run_calendar_sync)
     scheduler.start()
     logger.info("Scheduler started")
     yield
-    # Shutdown
     scheduler.shutdown(wait=False)
     logger.info("Scheduler stopped")
 
@@ -50,3 +46,4 @@ app.add_middleware(
 
 app.include_router(core_router, prefix="/api")
 app.include_router(calendar_router, prefix="/api/calendar")
+app.include_router(admin_router, prefix="/api/admin")
