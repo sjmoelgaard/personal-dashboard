@@ -21,14 +21,28 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    ports:
-      - "8801:8000"
+    networks:
+      - default
+      - coolify
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.dashboard-api.rule=Host(`mylife.smoelgaard.com`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.dashboard-api.entrypoints=https"
+      - "traefik.http.routers.dashboard-api.tls.certresolver=letsencrypt"
+      - "traefik.http.services.dashboard-api.loadbalancer.server.port=8000"
 
   frontend:
     build: ./frontend
     restart: unless-stopped
-    ports:
-      - "8802:80"
+    networks:
+      - default
+      - coolify
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.dashboard-frontend.rule=Host(`mylife.smoelgaard.com`)"
+      - "traefik.http.routers.dashboard-frontend.entrypoints=https"
+      - "traefik.http.routers.dashboard-frontend.tls.certresolver=letsencrypt"
+      - "traefik.http.services.dashboard-frontend.loadbalancer.server.port=80"
 
   ntfy:
     image: binwiederhier/ntfy:v2.11.0
@@ -36,9 +50,20 @@ services:
     command: serve
     volumes:
       - ntfy_data:/var/lib/ntfy
-    ports:
-      - "8803:80"
+    networks:
+      - default
+      - coolify
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.dashboard-ntfy.rule=Host(`ntfy.smoelgaard.com`)"
+      - "traefik.http.routers.dashboard-ntfy.entrypoints=https"
+      - "traefik.http.routers.dashboard-ntfy.tls.certresolver=letsencrypt"
+      - "traefik.http.services.dashboard-ntfy.loadbalancer.server.port=80"
 
 volumes:
   postgres_data:
   ntfy_data:
+
+networks:
+  coolify:
+    external: true
