@@ -12,6 +12,8 @@ class EventOut(BaseModel):
     location: str | None
     description: str | None
     source: str
+    source_id: int | None = None
+    source_color: str | None = None
 
     model_config = {"from_attributes": True}
 
