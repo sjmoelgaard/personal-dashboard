@@ -79,13 +79,20 @@ async def test_get_events_returns_list(client, monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_sync_without_ical_url_returns_error(client, monkeypatch):
+async def test_sync_returns_synced_count(client, monkeypatch):
     import app.core.config as cfg
     monkeypatch.setattr(cfg.settings, "owner_password", "testpass")
-    monkeypatch.setattr(cfg.settings, "ical_url", "")
-
     login = await client.post("/api/auth/login", json={"password": "testpass"})
     client.cookies.set("access_token", login.cookies["access_token"])
 
     r = await client.post("/api/calendar/sync")
-    assert r.status_code == 400
+    assert r.status_code == 200
+    assert "synced" in r.json()
+
+
+def test_parse_events_source_id_not_in_output():
+    """parse_events returnerer dicts uden source_id — det sættes af sync_calendar."""
+    from app.modules.calendar.service import parse_events
+    events = parse_events(MINIMAL_ICAL)
+    for e in events:
+        assert "source_id" not in e

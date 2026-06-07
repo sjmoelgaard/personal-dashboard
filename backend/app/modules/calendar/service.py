@@ -1,3 +1,4 @@
+import logging
 from datetime import date, datetime, timezone
 import httpx
 from icalendar import Calendar
@@ -6,6 +7,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.dialects.postgresql import insert
 
 from app.modules.calendar.models import Event
+from app.modules.calendar.source_models import CalendarSource
+
+logger = logging.getLogger(__name__)
 
 
 async def fetch_ical(url: str) -> bytes:
@@ -54,26 +58,30 @@ def parse_events(ical_bytes: bytes) -> list[dict]:
     return events
 
 
-async def sync_calendar(db: AsyncSession, ical_url: str) -> int:
-    """Fetch iCal, upsert events. Returns number of events synced."""
+async def sync_calendar(
+    db: AsyncSession, ical_url: str, source_id: int | None = None
+) -> int:
+    """Fetch iCal, upsert events med source_id. Returns antal synkroniserede events."""
     raw = await fetch_ical(ical_url)
     events = parse_events(raw)
     if not events:
         return 0
 
     for event_data in events:
+        data = {**event_data, "source_id": source_id}
         stmt = (
             insert(Event)
-            .values(**event_data)
+            .values(**data)
             .on_conflict_do_update(
                 index_elements=["uid"],
                 set_={
-                    "title": event_data["title"],
-                    "start_dt": event_data["start_dt"],
-                    "end_dt": event_data["end_dt"],
-                    "all_day": event_data["all_day"],
-                    "location": event_data["location"],
-                    "description": event_data["description"],
+                    "title": data["title"],
+                    "start_dt": data["start_dt"],
+                    "end_dt": data["end_dt"],
+                    "all_day": data["all_day"],
+                    "location": data["location"],
+                    "description": data["description"],
+                    "source_id": source_id,
                     "updated_at": datetime.now(timezone.utc),
                 },
             )
@@ -82,6 +90,34 @@ async def sync_calendar(db: AsyncSession, ical_url: str) -> int:
 
     await db.commit()
     return len(events)
+
+
+async def sync_source(db: AsyncSession, source_id: int) -> int:
+    """Synkroniser én kilde fra DB."""
+    result = await db.execute(
+        select(CalendarSource).where(CalendarSource.id == source_id)
+    )
+    source = result.scalar_one_or_none()
+    if not source:
+        raise ValueError(f"CalendarSource {source_id} ikke fundet")
+    return await sync_calendar(db, source.ical_url, source.id)
+
+
+async def sync_all_sources(db: AsyncSession) -> int:
+    """Synkroniser alle aktive kalender-kilder. Returns total antal events."""
+    result = await db.execute(
+        select(CalendarSource).where(CalendarSource.is_active == True)  # noqa: E712
+    )
+    sources = list(result.scalars().all())
+    total = 0
+    for source in sources:
+        try:
+            count = await sync_calendar(db, source.ical_url, source.id)
+            total += count
+            logger.info(f"Synkroniseret {count} events fra '{source.name}'")
+        except Exception as e:
+            logger.error(f"Sync fejlede for '{source.name}': {e}")
+    return total
 
 
 async def get_upcoming_events(db: AsyncSession, limit: int = 10) -> list[Event]:

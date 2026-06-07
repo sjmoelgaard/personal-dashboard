@@ -1,15 +1,14 @@
 from datetime import datetime
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import require_auth
-from app.core.config import settings
 from app.core.database import get_db
 from app.modules.calendar.schemas import EventOut
 from app.modules.calendar.service import (
     get_events_in_range,
     get_upcoming_events,
-    sync_calendar,
+    sync_all_sources,
 )
 
 router = APIRouter()
@@ -37,10 +36,5 @@ async def sync(
     db: AsyncSession = Depends(get_db),
     _: str = Depends(require_auth),
 ):
-    if not settings.ical_url:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="ICAL_URL ikke konfigureret i .env",
-        )
-    count = await sync_calendar(db, settings.ical_url)
+    count = await sync_all_sources(db)
     return {"synced": count}
