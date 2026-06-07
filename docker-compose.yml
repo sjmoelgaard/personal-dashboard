@@ -24,12 +24,6 @@ services:
     networks:
       - default
       - coolify
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.dashboard-api.rule=Host(`mylife.smoelgaard.com`) && PathPrefix(`/api`)"
-      - "traefik.http.routers.dashboard-api.entrypoints=https"
-      - "traefik.http.routers.dashboard-api.tls.certresolver=letsencrypt"
-      - "traefik.http.services.dashboard-api.loadbalancer.server.port=8000"
 
   frontend:
     build: ./frontend
@@ -37,12 +31,6 @@ services:
     networks:
       - default
       - coolify
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.dashboard-frontend.rule=Host(`mylife.smoelgaard.com`)"
-      - "traefik.http.routers.dashboard-frontend.entrypoints=https"
-      - "traefik.http.routers.dashboard-frontend.tls.certresolver=letsencrypt"
-      - "traefik.http.services.dashboard-frontend.loadbalancer.server.port=80"
 
   ntfy:
     image: binwiederhier/ntfy:v2.11.0
@@ -53,12 +41,6 @@ services:
     networks:
       - default
       - coolify
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.dashboard-ntfy.rule=Host(`ntfy.smoelgaard.com`)"
-      - "traefik.http.routers.dashboard-ntfy.entrypoints=https"
-      - "traefik.http.routers.dashboard-ntfy.tls.certresolver=letsencrypt"
-      - "traefik.http.services.dashboard-ntfy.loadbalancer.server.port=80"
 
 volumes:
   postgres_data:
