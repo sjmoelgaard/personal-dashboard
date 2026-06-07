@@ -4,12 +4,14 @@ export interface CalendarEvent {
   id: number
   uid: string
   title: string
-  start_dt: string   // ISO 8601 UTC
+  start_dt: string
   end_dt: string
   all_day: boolean
   location: string | null
   description: string | null
   source: string
+  source_id: number | null
+  source_color: string | null
 }
 
 export async function getUpcomingEvents(limit = 5): Promise<CalendarEvent[]> {
@@ -17,9 +19,9 @@ export async function getUpcomingEvents(limit = 5): Promise<CalendarEvent[]> {
 }
 
 export async function getEventsInRange(from: Date, to: Date): Promise<CalendarEvent[]> {
-  const fromStr = from.toISOString()
-  const toStr = to.toISOString()
-  return api.get<CalendarEvent[]>(`/calendar/events?from_dt=${fromStr}&to_dt=${toStr}`)
+  return api.get<CalendarEvent[]>(
+    `/calendar/events?from_dt=${from.toISOString()}&to_dt=${to.toISOString()}`
+  )
 }
 
 export async function syncCalendar(): Promise<{ synced: number }> {
