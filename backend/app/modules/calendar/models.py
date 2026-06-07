@@ -1,5 +1,5 @@
 from datetime import datetime
-from sqlalchemy import DateTime, String, Boolean, Text, Index
+from sqlalchemy import DateTime, ForeignKey, String, Boolean, Text, Index
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.sql import func
 from app.core.models import Base
@@ -21,5 +21,9 @@ class Event(Base):
     location: Mapped[str | None] = mapped_column(String(512), nullable=True)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     source: Mapped[str] = mapped_column(String(32), default="ical")
+    source_id: Mapped[int | None] = mapped_column(
+        ForeignKey("calendar.calendar_sources.id", ondelete="CASCADE"),
+        nullable=True,
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=func.now(), onupdate=func.now())
