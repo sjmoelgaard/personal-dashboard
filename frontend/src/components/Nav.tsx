@@ -4,6 +4,7 @@ import { useAuth } from '../hooks/useAuth'
 const links = [
   { to: '/', label: 'Forside' },
   { to: '/kalender', label: '📅 Kalender' },
+  { to: '/admin', label: '⚙️ Admin' },
 ]
 
 export function Nav() {

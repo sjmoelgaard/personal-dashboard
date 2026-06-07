@@ -3,6 +3,7 @@ import { AuthProvider } from './context/AuthContext'
 import { Login } from './pages/Login'
 import { Dashboard } from './pages/Dashboard'
 import { Calendar } from './pages/Calendar'
+import { Admin } from './pages/Admin'
 import { ProtectedRoute } from './components/ProtectedRoute'
 
 export default function App() {
@@ -24,6 +25,14 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <Calendar />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin"
+            element={
+              <ProtectedRoute>
+                <Admin />
               </ProtectedRoute>
             }
           />
