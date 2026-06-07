@@ -46,10 +46,13 @@ docker compose down
 # Start alle containers
 docker compose up -d
 
-# Rebuild og start (efter kode-ændringer)
-docker compose down
+# FULD DEPLOY (efter kode-ændringer fra Windows: git push)
+cd ~/personal-dashboard
 git pull
+docker compose down
 docker compose up -d --build
+bash scripts/update-traefik.sh     # ← VIGTIGT: opdater Traefik IPs efter rebuild!
+docker compose exec backend python -m alembic upgrade head
 
 # Se logs fra en container
 docker logs personal-dashboard-backend-1
@@ -57,6 +60,16 @@ docker logs personal-dashboard-frontend-1
 
 # Kør database migration
 docker compose exec backend python -m alembic upgrade head
+```
+
+## Traefik routing
+
+Traefik bruger en statisk config-fil i coolify-proxy containeren. Den **skal opdateres efter hvert deploy** fordi container IPs kan ændre sig.
+
+```bash
+# Opdatér Traefik routing (kør dette efter docker compose up --build)
+cd ~/personal-dashboard
+bash scripts/update-traefik.sh
 ```
 
 ## URLs
