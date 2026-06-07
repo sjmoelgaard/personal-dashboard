@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     ntfy_url: str = "http://ntfy:80"
     ntfy_topic: str = "mylife"
     anthropic_api_key: str = ""
+    ical_url: str = ""
 
     model_config = SettingsConfigDict(env_file=".env")
 
