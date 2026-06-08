@@ -10,6 +10,9 @@ class Settings(BaseSettings):
     ntfy_topic: str = "mylife"
     anthropic_api_key: str = ""
     ical_url: str = ""
+    google_client_id: str = ""
+    google_client_secret: str = ""
+    google_redirect_uri: str = "https://mylife.smoelgaard.com/api/admin/google/callback"
 
     model_config = SettingsConfigDict(env_file=".env")
 
