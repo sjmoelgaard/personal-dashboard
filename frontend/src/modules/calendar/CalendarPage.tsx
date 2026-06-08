@@ -153,7 +153,11 @@ export function CalendarPage() {
       </div>
 
       {/* Event detail panel */}
-      <EventDetail event={selectedEvent} />
+      <EventDetail
+        event={selectedEvent}
+        onEdit={() => {}}
+        onDelete={() => setSelectedEvent(null)}
+      />
     </div>
   )
 }
