@@ -17,11 +17,19 @@ import { da } from 'date-fns/locale'
 import type { CalendarEvent } from './calendarApi'
 import { getEventsInRange, syncCalendar } from './calendarApi'
 import { EventDetail } from './EventDetail'
+import { EventForm } from './EventForm'
+import { resolveEventColor } from './googleColors'
+import type { CalendarSource } from '../admin/adminApi'
+import { getCalendarSources } from '../admin/adminApi'
+
+type Mode = 'view' | 'create' | 'edit'
 
 export function CalendarPage() {
   const [currentMonth, setCurrentMonth] = useState(new Date())
   const [events, setEvents] = useState<CalendarEvent[]>([])
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null)
+  const [mode, setMode] = useState<Mode>('view')
+  const [sources, setSources] = useState<CalendarSource[]>([])
   const [syncing, setSyncing] = useState(false)
   const [syncMsg, setSyncMsg] = useState('')
 
@@ -32,11 +40,25 @@ export function CalendarPage() {
   const days = eachDayOfInterval({ start: calStart, end: calEnd })
 
   useEffect(() => {
+    getCalendarSources().then(setSources).catch(() => setSources([]))
+  }, [])
+
+  useEffect(() => {
     setSelectedEvent(null)
+    setMode('view')
     getEventsInRange(calStart, calEnd)
       .then(setEvents)
       .catch(() => setEvents([]))
   }, [currentMonth])
+
+  async function refreshEvents() {
+    try {
+      const fresh = await getEventsInRange(calStart, calEnd)
+      setEvents(fresh)
+    } catch {
+      // ignore
+    }
+  }
 
   function eventsOnDay(day: Date): CalendarEvent[] {
     return events.filter(e => isSameDay(parseISO(e.start_dt), day))
@@ -44,6 +66,7 @@ export function CalendarPage() {
 
   function handleEventClick(e: CalendarEvent) {
     setSelectedEvent(prev => (prev?.id === e.id ? null : e))
+    setMode('view')
   }
 
   async function handleSync() {
@@ -52,13 +75,24 @@ export function CalendarPage() {
     try {
       const result = await syncCalendar()
       setSyncMsg(`${result.synced} events synkroniseret`)
-      const fresh = await getEventsInRange(calStart, calEnd)
-      setEvents(fresh)
+      await refreshEvents()
     } catch {
       setSyncMsg('Sync fejlede')
     } finally {
       setSyncing(false)
     }
+  }
+
+  function handleSave(saved: CalendarEvent) {
+    setMode('view')
+    setSelectedEvent(saved)
+    refreshEvents()
+  }
+
+  function handleDelete() {
+    setMode('view')
+    setSelectedEvent(null)
+    refreshEvents()
   }
 
   const weekDays = ['Man', 'Tir', 'Ons', 'Tor', 'Fre', 'Lør', 'Søn']
@@ -86,6 +120,15 @@ export function CalendarPage() {
         </div>
         <div className="flex items-center gap-3">
           {syncMsg && <span className="text-sm text-gray-400">{syncMsg}</span>}
+          <button
+            onClick={() => {
+              setMode('create')
+              setSelectedEvent(null)
+            }}
+            className="text-sm bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
+          >
+            + Ny aftale
+          </button>
           <button
             onClick={handleSync}
             disabled={syncing}
@@ -123,7 +166,7 @@ export function CalendarPage() {
                 {format(day, 'd')}
               </div>
               {dayEvents.slice(0, 3).map(e => {
-                const color = e.source_color ?? '#eab308'
+                const color = resolveEventColor(e)
                 const isSelected = selectedEvent?.id === e.id
                 return (
                   <button
@@ -152,12 +195,29 @@ export function CalendarPage() {
         })}
       </div>
 
-      {/* Event detail panel */}
-      <EventDetail
-        event={selectedEvent}
-        onEdit={() => {}}
-        onDelete={() => setSelectedEvent(null)}
-      />
+      {/* Bottom panel */}
+      {mode === 'view' && selectedEvent && (
+        <EventDetail
+          event={selectedEvent}
+          onEdit={() => setMode('edit')}
+          onDelete={handleDelete}
+        />
+      )}
+      {mode === 'create' && (
+        <EventForm
+          sources={sources}
+          onSave={handleSave}
+          onCancel={() => setMode('view')}
+        />
+      )}
+      {mode === 'edit' && selectedEvent && (
+        <EventForm
+          event={selectedEvent}
+          sources={sources}
+          onSave={handleSave}
+          onCancel={() => setMode('view')}
+        />
+      )}
     </div>
   )
 }
