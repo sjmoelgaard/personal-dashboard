@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { format } from 'date-fns'
+import { format, addDays } from 'date-fns'
 import type { CalendarEvent, EventCreate, EventUpdate } from './calendarApi'
 import { createEvent, updateEvent } from './calendarApi'
 import type { CalendarSource } from '../admin/adminApi'
@@ -40,6 +40,9 @@ export function EventForm({ event, sources, defaultSourceId, onSave, onCancel }:
     event?.source_id ?? defaultSourceId ?? googleSources[0]?.id ?? 0
   )
   const [allDay, setAllDay] = useState(event?.all_day ?? false)
+  const [endDate, setEndDate] = useState(
+    event ? toLocalDateString(event.end_dt) : format(addDays(new Date(), 1), 'yyyy-MM-dd')
+  )
   const [date, setDate] = useState(
     event ? toLocalDateString(event.start_dt) : format(new Date(), 'yyyy-MM-dd')
   )
@@ -58,6 +61,15 @@ export function EventForm({ event, sources, defaultSourceId, onSave, onCancel }:
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
+  function handleAllDayChange(checked: boolean) {
+    setAllDay(checked)
+    if (checked) {
+      const startDateObj = new Date(date + 'T00:00:00Z')
+      const nextDay = format(addDays(startDateObj, 1), 'yyyy-MM-dd')
+      setEndDate(nextDay)
+    }
+  }
+
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     if (!title.trim()) return
@@ -69,7 +81,7 @@ export function EventForm({ event, sources, defaultSourceId, onSave, onCancel }:
         ? `${date}T00:00:00.000Z`
         : `${date}T${startTime}:00.000Z`
       const endIso = allDay
-        ? `${date}T00:00:00.000Z`
+        ? `${endDate}T00:00:00.000Z`
         : `${date}T${endTime}:00.000Z`
 
       let saved: CalendarEvent
@@ -160,7 +172,7 @@ export function EventForm({ event, sources, defaultSourceId, onSave, onCancel }:
             id="allDay"
             type="checkbox"
             checked={allDay}
-            onChange={e => setAllDay(e.target.checked)}
+            onChange={e => handleAllDayChange(e.target.checked)}
             className="rounded"
           />
           <label htmlFor="allDay" className="text-gray-300 text-sm">
@@ -179,6 +191,20 @@ export function EventForm({ event, sources, defaultSourceId, onSave, onCancel }:
             className={inputClass}
           />
         </div>
+
+        {/* Slutdato (heldagsbegivenheder) */}
+        {allDay && (
+          <div>
+            <label className={labelClass}>Slutdato</label>
+            <input
+              type="date"
+              value={endDate}
+              onChange={e => setEndDate(e.target.value)}
+              required
+              className={inputClass}
+            />
+          </div>
+        )}
 
         {/* Fra / Til */}
         {!allDay && (
