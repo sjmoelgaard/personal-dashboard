@@ -90,15 +90,15 @@ GET /api/admin/google/callback?code=xxx&state=xxx
 - Validates state
 - Exchanges code for credentials
 - Fetches user's calendar list from Google
-- Stores credentials temporarily (in a short-lived DB row or signed response)
-- Redirects to `/admin?google_calendars=<base64-encoded-list>`
+- Stores credentials in a temp table `calendar.google_oauth_sessions` (TTL 10 min, keyed by a random session_token)
+- Redirects to `/admin?google_session=<session_token>`
 
-Frontend reads `google_calendars` param on page load and shows calendar picker.
+Frontend reads `google_session` param on page load → calls `GET /api/admin/google/session/{token}` → receives calendar list. When user selects calendar and submits:
 
 ```
 POST /api/admin/google/connect
 ```
-Body: `{calendar_id, name, color, credentials}` — creates CalendarSource with `source_type="google"`, triggers immediate sync.
+Body: `{session_token, calendar_id, name, color}` — backend looks up credentials from session, creates CalendarSource with `source_type="google"`, deletes session row, triggers immediate sync.
 
 ### Modified: `backend/app/modules/calendar/router.py`
 
@@ -148,10 +148,11 @@ class EventUpdate(BaseModel):
     google_color_id: str | None = None
 ```
 
-`EventOut` gains one new field:
+`EventOut` gains new fields:
 ```python
 google_event_id: str | None = None
-editable: bool = False   # True only when google_event_id is not None
+google_color_id: str | None = None   # Google color key e.g. "1" (tomato)
+editable: bool = False               # True only when google_event_id is not None
 ```
 
 ### New: `backend/alembic/versions/0004_google_calendar.py`
@@ -275,6 +276,8 @@ const [mode, setMode] = useState<'view' | 'create' | 'edit'>('view')
 const [sources, setSources] = useState<CalendarSource[]>([])
 ```
 
+`useEffect` on mount fetches `getCalendarSources()` and stores in `sources` state (used for the calendar dropdown in EventForm).
+
 Bottom panel logic:
 - `mode === 'view'` → show `<EventDetail>` (or nothing if no selection)
 - `mode === 'create'` → show `<EventForm>` (empty, with calendar dropdown)
@@ -301,7 +304,8 @@ After save/delete/cancel → `setMode('view')`, refresh events for current month
 New functions:
 ```ts
 getGoogleAuthUrl(): Promise<{auth_url: string}>
-connectGoogleCalendar(data: {calendar_id, name, color, credentials_token}): Promise<CalendarSource>
+getGoogleSession(token: string): Promise<{calendars: {id: string, name: string, color: string}[]}>
+connectGoogleCalendar(data: {session_token: string, calendar_id: string, name: string, color: string}): Promise<CalendarSource>
 ```
 
 ---
