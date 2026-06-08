@@ -5,7 +5,8 @@ from pydantic import BaseModel
 class CalendarSourceOut(BaseModel):
     id: int
     name: str
-    ical_url: str
+    source_type: str
+    ical_url: str | None = None
     color: str
     is_active: bool
     created_at: datetime
@@ -17,3 +18,10 @@ class CalendarSourceCreate(BaseModel):
     name: str
     ical_url: str
     color: str = "#eab308"
+
+
+class GoogleConnectRequest(BaseModel):
+    session_token: str
+    calendar_id: str
+    name: str
+    color: str = "#3b82f6"
