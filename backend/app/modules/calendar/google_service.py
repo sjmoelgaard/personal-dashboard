@@ -3,9 +3,7 @@
 All public async functions wrap synchronous Google API calls with asyncio.to_thread.
 """
 import asyncio
-import json
 import logging
-import secrets
 from datetime import datetime, timezone
 from typing import Any
 
@@ -21,7 +19,6 @@ logger = logging.getLogger(__name__)
 
 SCOPES = [
     "https://www.googleapis.com/auth/calendar.events",
-    "https://www.googleapis.com/auth/calendar.readonly",
 ]
 
 
