@@ -106,3 +106,18 @@ def test_event_data_to_google_body_no_reminder():
     }
     body = _event_data_to_google_body(data)
     assert body["reminders"]["useDefault"] is True
+
+
+def test_normalize_google_event_with_reminder():
+    item = {
+        "id": "remind1",
+        "summary": "Meeting with reminder",
+        "start": {"dateTime": "2026-06-10T14:00:00Z"},
+        "end": {"dateTime": "2026-06-10T15:00:00Z"},
+        "reminders": {
+            "useDefault": False,
+            "overrides": [{"method": "popup", "minutes": 15}],
+        },
+    }
+    result = _normalize_google_event(item)
+    assert result["reminder_minutes"] == 15

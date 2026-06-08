@@ -19,6 +19,7 @@ logger = logging.getLogger(__name__)
 
 SCOPES = [
     "https://www.googleapis.com/auth/calendar.events",
+    "https://www.googleapis.com/auth/calendar.readonly",
 ]
 
 
@@ -41,16 +42,6 @@ def _make_flow() -> Flow:
     return flow
 
 
-def _dict_to_creds(creds_dict: dict) -> google.oauth2.credentials.Credentials:
-    return google.oauth2.credentials.Credentials(
-        token=creds_dict.get("token"),
-        refresh_token=creds_dict.get("refresh_token"),
-        token_uri=creds_dict.get("token_uri", "https://oauth2.googleapis.com/token"),
-        client_id=creds_dict.get("client_id"),
-        client_secret=creds_dict.get("client_secret"),
-    )
-
-
 def _creds_to_dict(creds: google.oauth2.credentials.Credentials) -> dict:
     return {
         "token": creds.token,
@@ -58,7 +49,23 @@ def _creds_to_dict(creds: google.oauth2.credentials.Credentials) -> dict:
         "token_uri": creds.token_uri,
         "client_id": creds.client_id,
         "client_secret": creds.client_secret,
+        "scopes": list(creds.scopes) if creds.scopes else None,
+        "expiry": creds.expiry.isoformat() if creds.expiry else None,
     }
+
+
+def _dict_to_creds(creds_dict: dict) -> google.oauth2.credentials.Credentials:
+    expiry_str = creds_dict.get("expiry")
+    expiry = datetime.fromisoformat(expiry_str) if expiry_str else None
+    return google.oauth2.credentials.Credentials(
+        token=creds_dict.get("token"),
+        refresh_token=creds_dict.get("refresh_token"),
+        token_uri=creds_dict.get("token_uri", "https://oauth2.googleapis.com/token"),
+        client_id=creds_dict.get("client_id"),
+        client_secret=creds_dict.get("client_secret"),
+        scopes=creds_dict.get("scopes"),
+        expiry=expiry,
+    )
 
 
 def _normalize_google_event(item: dict) -> dict:
@@ -171,7 +178,7 @@ async def get_calendar_list(creds_dict: dict) -> list[dict]:
     """Return user's Google Calendars: [{id, name, color}]."""
     def _sync():
         creds = _dict_to_creds(creds_dict)
-        service = build("calendar", "v3", credentials=creds)
+        service = build("calendar", "v3", credentials=creds, cache_discovery=False)
         result = service.calendarList().list().execute()
         return [
             {
@@ -205,7 +212,7 @@ async def fetch_google_events(
     """Fetch events from Google Calendar API. Returns list of normalized event dicts."""
     def _sync():
         creds = _dict_to_creds(creds_dict)
-        service = build("calendar", "v3", credentials=creds)
+        service = build("calendar", "v3", credentials=creds, cache_discovery=False)
         events = []
         page_token = None
         while True:
@@ -241,7 +248,7 @@ async def create_google_event(
     """Create event in Google Calendar. Returns google_event_id."""
     def _sync():
         creds = _dict_to_creds(creds_dict)
-        service = build("calendar", "v3", credentials=creds)
+        service = build("calendar", "v3", credentials=creds, cache_discovery=False)
         body = _event_data_to_google_body(event_data)
         result = service.events().insert(calendarId=calendar_id, body=body).execute()
         return result["id"]
@@ -258,7 +265,7 @@ async def update_google_event(
     """Update event in Google Calendar."""
     def _sync():
         creds = _dict_to_creds(creds_dict)
-        service = build("calendar", "v3", credentials=creds)
+        service = build("calendar", "v3", credentials=creds, cache_discovery=False)
         body = _event_data_to_google_body(event_data)
         service.events().update(
             calendarId=calendar_id, eventId=google_event_id, body=body
@@ -275,7 +282,7 @@ async def delete_google_event(
     """Delete event from Google Calendar."""
     def _sync():
         creds = _dict_to_creds(creds_dict)
-        service = build("calendar", "v3", credentials=creds)
+        service = build("calendar", "v3", credentials=creds, cache_discovery=False)
         service.events().delete(calendarId=calendar_id, eventId=google_event_id).execute()
 
     await asyncio.to_thread(_sync)
