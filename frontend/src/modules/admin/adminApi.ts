@@ -3,7 +3,8 @@ import { api } from '../../api/client'
 export interface CalendarSource {
   id: number
   name: string
-  ical_url: string
+  source_type: string
+  ical_url: string | null
   color: string
   is_active: boolean
   created_at: string
@@ -12,6 +13,13 @@ export interface CalendarSource {
 export interface CalendarSourceCreate {
   name: string
   ical_url: string
+  color: string
+}
+
+export interface GoogleConnectData {
+  session_token: string
+  calendar_id: string
+  name: string
   color: string
 }
 
@@ -27,4 +35,20 @@ export async function createCalendarSource(
 
 export async function deleteCalendarSource(id: number): Promise<void> {
   return api.delete<void>(`/admin/calendar-sources/${id}`)
+}
+
+export async function getGoogleAuthUrl(): Promise<{ auth_url: string }> {
+  return api.get<{ auth_url: string }>('/admin/google/auth-url')
+}
+
+export async function getGoogleSession(
+  token: string
+): Promise<{ calendars: { id: string; name: string; color: string }[] }> {
+  return api.get(`/admin/google/session/${token}`)
+}
+
+export async function connectGoogleCalendar(
+  data: GoogleConnectData
+): Promise<CalendarSource> {
+  return api.post<CalendarSource>('/admin/google/connect', data)
 }
