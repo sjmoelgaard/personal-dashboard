@@ -226,10 +226,6 @@ export function AdminPage() {
           {msg && <p className="text-sm text-gray-400 mt-3">{msg}</p>}
         </div>
       )}
-
-      {msg && !googleSession && (
-        <p className="text-sm text-gray-400 mt-4">{msg}</p>
-      )}
     </div>
   )
 }
